@@ -1,0 +1,10 @@
+#!/usr/bin/env ansible-playbook
+
+- hosts: all
+
+  tasks:
+  - name: Include Role
+    include_role:
+      name: kubernetes
+      apply:
+        become: yes
