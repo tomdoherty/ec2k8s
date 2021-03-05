@@ -34,6 +34,15 @@ resource "aws_security_group_rule" "ingress_80" {
   security_group_id = aws_security_group.k8s-sg.id
 }
 
+resource "aws_security_group_rule" "ingress_6443" {
+  type              = "ingress"
+  from_port         = 6443
+  to_port           = 6443
+  protocol          = "TCP"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.k8s-sg.id
+}
+
 resource "aws_security_group_rule" "ingress_30171" {
   type              = "ingress"
   from_port         = 30171
@@ -100,7 +109,7 @@ resource "aws_instance" "workers" {
   user_data                   = <<-EOF
     #!/bin/bash
     mkdir -p /etc/ansible/facts.d
-    printf '[kubernetes]\nmode=worker\n' >/etc/ansible/facts.d/aws.fact
+    printf '[kubernetes]\nmode=worker\ncontroller_ip=${aws_instance.controller.public_ip}\n' >/etc/ansible/facts.d/aws.fact
   EOF
 
   vpc_security_group_ids = [
