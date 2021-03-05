@@ -1,0 +1,24 @@
+---
+- name: Converge
+  hosts: all
+
+  pre_tasks:
+    - name: Set mode
+      set_fact:
+        kubernetes_mode: "{{ ansible_hostname }}"
+
+    - name: Install iproute2
+      package:
+        name: iproute2
+
+    - name: Tweak kubelet args
+      copy:
+        dest: /etc/default/kubelet
+        mode: 0600
+        content: |
+          KUBELET_EXTRA_ARGS="--fail-swap-on=false --cgroup-driver=cgroupfs"
+
+  tasks:
+    - name: "Include kubernetes"
+      include_role:
+        name: "kubernetes"

@@ -1,9 +1,3 @@
-
-// https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb_target_group_attachment#example-usage
-// https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eip
-// https://github.com/chrisshiels/terraform/blob/master/modules/aws/vpc/main.tf
-// https://v1-18.docs.kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-join/#token-based-discovery-without-ca-pinning
-
 terraform {
   required_providers {
     aws = {
@@ -29,6 +23,15 @@ data "aws_subnet_ids" "default" {
 resource "aws_security_group" "k8s-sg" {
   name   = "k8s-security-group"
   vpc_id = data.aws_vpc.default.id
+}
+
+resource "aws_security_group_rule" "ingress_80" {
+  type              = "ingress"
+  from_port         = 80
+  to_port           = 80
+  protocol          = "TCP"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.k8s-sg.id
 }
 
 resource "aws_security_group_rule" "ingress_30171" {
@@ -105,44 +108,34 @@ resource "aws_instance" "workers" {
   ]
 }
 
-resource "aws_lb" "lb" {
+resource "aws_elb" "lb" {
   name               = "k8s-lb"
-  internal           = false
-  load_balancer_type = "network"
-  subnets            = data.aws_subnet_ids.default.ids
-}
-
-resource "aws_lb_target_group" "agent-30171" {
-  port     = 30171
-  protocol = "TCP"
-  vpc_id   = data.aws_vpc.default.id
-}
-
-resource "aws_lb_target_group_attachment" "test" {
-  target_group_arn = aws_lb_target_group.agent-30171.arn
-  target_id        = aws_instance.controller.id
-  port             = 30171
-}
-
-resource "aws_lb_listener" "port_30171" {
-  load_balancer_arn = aws_lb.lb.arn
-  port              = "30171"
-  protocol          = "TCP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.agent-30171.arn
+  availability_zones = ["us-west-2a", "us-west-2b", "us-west-2c"]
+  listener {
+    instance_port     = 30171
+    instance_protocol = "http"
+    lb_port           = 80
+    lb_protocol       = "http"
   }
+  health_check {
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 3
+    target              = "TCP:30171"
+    interval            = 5
+  }
+
+  instances           = aws_instance.workers.*.id
 }
 
-resource "aws_route53_zone" "primary" {
+data "aws_route53_zone" "primary" {
   name = "tom.works"
 }
 
 resource "aws_route53_record" "www" {
-  zone_id = aws_route53_zone.primary.zone_id
+  zone_id = data.aws_route53_zone.primary.zone_id
   name    = "k8s.tom.works"
   type    = "CNAME"
   ttl     = "300"
-  records = [aws_lb.lb.dns_name]
+  records = [aws_elb.lb.dns_name]
 }

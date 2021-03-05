@@ -1,0 +1,45 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+platforms:
+  - name: controller
+    image: ubuntu:xenial
+    pre_build_image: false
+    command: /sbin/init
+    tmpfs:
+      - /run
+      - /tmp
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /var/lib/docker
+    privileged: true
+    network_mode: bridge
+    networks:
+      - name: kubernetes
+
+  - name: worker
+    image: ubuntu:xenial
+    pre_build_image: false
+    command: /sbin/init
+    tmpfs:
+      - /run
+      - /tmp
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /var/lib/docker
+    privileged: true
+    network_mode: bridge
+    networks:
+      - name: kubernetes
+
+provisioner:
+  name: ansible
+verifier:
+  name: testinfra
+lint: |
+  set -e
+  yamllint .
+  ansible-lint
+  flake8
