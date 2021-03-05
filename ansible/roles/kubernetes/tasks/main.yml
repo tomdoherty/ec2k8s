@@ -136,6 +136,7 @@
         line: "    server: https://{{ ansible_host }}:6443"
       connection: local
       become: no
+      tags: ['molecule-notest']
     
   when: kubernetes_mode == 'controller'
 

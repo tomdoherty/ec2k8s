@@ -32,7 +32,7 @@ def test_kubectl(host):
     if host.ansible.get_variables()['inventory_hostname'] == 'worker':
         return
 
-    cmd = host.run('kubectl get nodes')
+    cmd = host.run('kubectl --kubeconfig=/etc/kubernetes/admin.conf get nodes')
 
     assert cmd.rc == 0
     assert 'worker' in cmd.stdout
