@@ -2,6 +2,6 @@
 
 - name: Join node to Kubernetes controller
   shell: >
-    {{ kubernetes_join_command }}
+    kubeadm join --token abcdef.1234567890abcdef --discovery-token-unsafe-skip-ca-verification {{ ansible_local.aws.kubernetes.controller_ip }}:6443
     creates=/etc/kubernetes/kubelet.conf
   tags: ['molecule-nolint']

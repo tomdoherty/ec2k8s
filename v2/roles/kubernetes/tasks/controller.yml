@@ -12,6 +12,7 @@
     --pod-network-cidr=10.244.0.0/16
     --apiserver-advertise-address={{ ansible_default_ipv4.address }}
     --ignore-preflight-errors=all
+    --token abcdef.1234567890abcdef
   register: kubeadmin_init
   when:
     - kubernetes_mode == 'controller'
@@ -46,20 +47,3 @@
   when:
     - not kubernetes_init_stat.stat.exists
   tags: ['molecule-notest']
-
-
-- name: Get the kubeadm join command from the Kubernetes controller
-  command: kubeadm token create --print-join-command
-  changed_when: false
-  register: kubernetes_join_command_result
-
-
-- name: Set the kubeadm join command globally
-  set_fact:
-    kubernetes_join_command: >
-      {{ kubernetes_join_command_result.stdout }}
-      --ignore-preflight-errors=all
-  when: kubernetes_join_command_result.stdout is defined
-  delegate_to: "{{ item }}"
-  delegate_facts: true
-  with_items: "{{ groups['all'] }}"
