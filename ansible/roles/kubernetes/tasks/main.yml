@@ -1,6 +1,6 @@
 ---
 # tasks file for kubernetes
-
+#
 
 - name: Determine mode
   set_fact:
@@ -101,32 +101,56 @@
     enabled: yes
 
 
-- include_tasks: controller.yml
+- name: Configure controller
+  block:
+    - name: Check if Kubernetes has already been initialized
+      stat:
+        path: /etc/kubernetes/admin.conf
+      register: kubernetes_init_stat
+    
+    
+    - name: Initialize Kubernetes controller with kubeadm init
+      command: >
+        kubeadm init
+        --apiserver-cert-extra-sans={{ ansible_host }}
+        --pod-network-cidr=10.244.0.0/16
+        --apiserver-advertise-address={{ ansible_default_ipv4.address }}
+        --ignore-preflight-errors=all
+        --token abcdef.1234567890abcdef
+      register: kubeadmin_init
+      when:
+        - not kubernetes_init_stat.stat.exists
+    
+
+    - name: Fetch kubeconfig
+      fetch:
+        src: /etc/kubernetes/admin.conf
+        dest: kubeconfig.yaml
+        flat: yes
+
+
+    - name: Replace
+      lineinfile:
+        name: kubeconfig.yaml
+        regexp: "server:"
+        line: "    server: https://{{ ansible_host }}:6443"
+      connection: local
+      become: no
+    
   when: kubernetes_mode == 'controller'
 
 
-- include_tasks: worker.yml
+- name: Configure worker
+  block:
+    - name: Determine controller_ip
+      set_fact:
+        controller_ip: "{{ ansible_local.aws.kubernetes.controller_ip }}"
+      when: ansible_local.aws.kubernetes.controller_ip is defined
+    
+    
+    - name: Join node to Kubernetes controller
+      shell: >
+        kubeadm join --token abcdef.1234567890abcdef --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification {{ controller_ip }}:6443
+        creates=/etc/kubernetes/kubelet.conf
+      tags: ['molecule-nolint']
   when: kubernetes_mode == 'worker'
-
-
-- name: Wait for ingress-nginx
-  command: >
-    kubectl -n ingress-nginx wait --for=condition=ready pod -l app.kubernetes.io/component=controller --timeout=300s
-  when: kubernetes_mode == 'controller'
-  tags: ['molecule-notest']
-
-
-- name: Copy example app
-  copy:
-    src: hello.yaml
-    dest: /tmp/hello.yaml
-    mode: 0600
-  when: kubernetes_mode == 'controller'
-  tags: ['molecule-notest']
-
-
-- name: Deploy example app
-  command: >
-    kubectl apply -f /tmp/hello.yaml
-  when: kubernetes_mode == 'controller'
-  tags: ['molecule-notest']

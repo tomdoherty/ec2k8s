@@ -6,10 +6,7 @@
     - name: Set mode
       set_fact:
         kubernetes_mode: "{{ ansible_hostname }}"
-
-    - name: Install iproute2
-      package:
-        name: iproute2
+        controller_ip: controller
 
     - name: Tweak kubelet args
       copy:

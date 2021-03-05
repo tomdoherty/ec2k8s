@@ -2,5 +2,7 @@
 .terraform
 .terraform.tfstate.lock.info
 __pycache__
+kubeconfig.yaml
+kustomize
 terraform.tfstate
 terraform.tfstate.backup
