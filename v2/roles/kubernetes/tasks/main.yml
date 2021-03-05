@@ -1,6 +1,13 @@
 ---
 # tasks file for kubernetes
 
+
+- name: Determine mode
+  set_fact:
+    kubernetes_mode: "{{ ansible_local.aws.kubernetes.mode }}"
+  when: ansible_local.aws.kubernetes.mode is defined
+
+
 - name: Install packages that allow apt to be used over HTTPS
   apt:
     name: "{{ packages }}"
@@ -37,8 +44,14 @@
     - docker-ce 
     - docker-ce-cli 
     - containerd.io
-  notify:
-    - docker status
+
+
+- name: Start docker
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+    daemon_reload: yes
 
 
 - name: Remove swapfile from /etc/fstab
@@ -54,6 +67,7 @@
 - name: Disable swap
   command: swapoff -a
   when: ansible_swaptotal_mb > 0
+  tags: ['molecule-notest']
 
 
 - name: Add an apt signing key for Kubernetes
@@ -80,30 +94,39 @@
       - kubeadm 
       - kubectl
 
-
 - name: Start kubelet
   service:
     name: kubelet
-    daemon_reload: yes
     state: started
+    enabled: yes
 
 
 - include_tasks: controller.yml
-  when: ansible_local.aws.kubernetes.mode == 'controller'
+  when: kubernetes_mode == 'controller'
 
 
 - include_tasks: worker.yml
-  when: ansible_local.aws.kubernetes.mode == 'worker'
+  when: kubernetes_mode == 'worker'
+
+
+- name: Wait for ingress-nginx
+  command: >
+    kubectl -n ingress-nginx wait --for=condition=ready pod -l app.kubernetes.io/component=controller --timeout=300s
+  when: kubernetes_mode == 'controller'
+  tags: ['molecule-notest']
 
 
 - name: Copy example app
   copy:
     src: hello.yaml
     dest: /tmp/hello.yaml
-  when: ansible_local.aws.kubernetes.mode == 'controller'
+    mode: 0600
+  when: kubernetes_mode == 'controller'
+  tags: ['molecule-notest']
 
 
 - name: Deploy example app
   command: >
     kubectl apply -f /tmp/hello.yaml
-  when: ansible_local.aws.kubernetes.mode == 'controller'
+  when: kubernetes_mode == 'controller'
+  tags: ['molecule-notest']

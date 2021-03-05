@@ -6,7 +6,7 @@
   register: kubernetes_init_stat
 
 
-- name: Initialize Kubernetes master with kubeadm init
+- name: Initialize Kubernetes controller with kubeadm init
   command: >
     kubeadm init
     --pod-network-cidr=10.244.0.0/16
@@ -14,7 +14,7 @@
     --ignore-preflight-errors=all
   register: kubeadmin_init
   when:
-    - ansible_local.aws.kubernetes.mode == 'controller'
+    - kubernetes_mode == 'controller'
     - not kubernetes_init_stat.stat.exists
 
 
@@ -36,7 +36,6 @@
 - name: Install flannel
   command: >
     kubectl apply -f https://github.com/coreos/flannel/raw/master/Documentation/kube-flannel.yml
-  register: kubeadmin_init
   when:
     - not kubernetes_init_stat.stat.exists
 
@@ -44,12 +43,12 @@
 - name: Install ingress-nginx
   command: >
     kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.44.0/deploy/static/provider/baremetal/deploy.yaml
-  register: kubeadmin_init
   when:
     - not kubernetes_init_stat.stat.exists
+  tags: ['molecule-notest']
 
 
-- name: Get the kubeadm join command from the Kubernetes master
+- name: Get the kubeadm join command from the Kubernetes controller
   command: kubeadm token create --print-join-command
   changed_when: false
   register: kubernetes_join_command_result
@@ -59,6 +58,7 @@
   set_fact:
     kubernetes_join_command: >
       {{ kubernetes_join_command_result.stdout }}
+      --ignore-preflight-errors=all
   when: kubernetes_join_command_result.stdout is defined
   delegate_to: "{{ item }}"
   delegate_facts: true
