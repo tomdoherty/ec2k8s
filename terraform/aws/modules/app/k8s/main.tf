@@ -1,17 +1,3 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 3.27"
-    }
-  }
-}
-
-provider "aws" {
-  profile = "default"
-  region  = "us-west-2"
-}
-
 data "aws_vpc" "default" {
   default = true
 }
@@ -103,7 +89,7 @@ resource "aws_instance" "controller" {
 resource "aws_instance" "workers" {
   ami                         = "ami-08d70e59c07c61a3a"
   instance_type               = "t2.micro"
-  count                       = 3
+  count                       = var.worker_count
   associate_public_ip_address = true
   key_name                    = "ssh-key"
   user_data                   = <<-EOF
@@ -134,16 +120,12 @@ resource "aws_elb" "lb" {
     interval            = 5
   }
 
-  instances           = aws_instance.workers.*.id
-}
-
-data "aws_route53_zone" "primary" {
-  name = "tom.works"
+  instances = aws_instance.workers.*.id
 }
 
 resource "aws_route53_record" "www" {
-  zone_id = data.aws_route53_zone.primary.zone_id
-  name    = "k8s.tom.works"
+  zone_id = var.zone_id
+  name    = var.ingress_dns
   type    = "CNAME"
   ttl     = "300"
   records = [aws_elb.lb.dns_name]

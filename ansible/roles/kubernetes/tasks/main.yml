@@ -94,6 +94,7 @@
       - kubeadm 
       - kubectl
 
+
 - name: Start kubelet
   service:
     name: kubelet
@@ -109,7 +110,7 @@
       register: kubernetes_init_stat
     
     
-    - name: Initialize Kubernetes controller with kubeadm init
+    - name: Initialize Kubernetes primary controller
       command: >
         kubeadm init
         --apiserver-cert-extra-sans={{ ansible_host }}
@@ -117,10 +118,9 @@
         --apiserver-advertise-address={{ ansible_default_ipv4.address }}
         --ignore-preflight-errors=all
         --token abcdef.1234567890abcdef
-      register: kubeadmin_init
       when:
         - not kubernetes_init_stat.stat.exists
-    
+
 
     - name: Fetch kubeconfig
       fetch:
@@ -147,8 +147,8 @@
       set_fact:
         controller_ip: "{{ ansible_local.aws.kubernetes.controller_ip }}"
       when: ansible_local.aws.kubernetes.controller_ip is defined
-    
-    
+
+
     - name: Join node to Kubernetes controller
       shell: >
         kubeadm join --token abcdef.1234567890abcdef --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification {{ controller_ip }}:6443

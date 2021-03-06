@@ -9,8 +9,7 @@ $ . venv/bin/activate
 $ pip install -r requirements.txt
 $ curl -sL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv4.0.4/kustomize_v4.0.4_darwin_amd64.tar.gz | tar xf - 
 
-$ ( cd terraform/aws/global/r53; terraform apply ) # create hosted zone
-$ ( cd terraform/aws/us-west-2/k8s; terraform apply ) # bring up ec2 instances & elb
+$ ( cd terraform/aws/environments/dev/us-west-2/app; terraform apply ) # bring up ec2 instances & elb
 $ ( cd ansible; ./playbook.yml ) # deploy kubernetes
 $ ./kustomize build kubernetes | kubectl --kubeconfig=ansible/kubeconfig.yaml apply -f -
 ```
@@ -25,5 +24,5 @@ $ curl http://k8s.tom.works # test application
 # cleanup
 
 ```shell
-$ ( cd terraform/aws/us-west-2/k8s; terraform destroy ) # bring up ec2 instances & elb
+$ ( cd terraform/aws/environments/dev/us-west-2/app; terraform destroy ) # bring up ec2 instances & elb
 ```

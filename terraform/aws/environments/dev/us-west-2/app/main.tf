@@ -11,7 +11,3 @@ provider "aws" {
   profile = "default"
   region  = "us-west-2"
 }
-
-resource "aws_route53_zone" "primary" {
-  name = "tom.works"
-}
