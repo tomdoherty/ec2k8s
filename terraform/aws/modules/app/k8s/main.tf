@@ -103,24 +103,43 @@ resource "aws_instance" "workers" {
   ]
 }
 
-resource "aws_elb" "lb" {
-  name               = "k8s-lb"
-  availability_zones = ["us-west-2a", "us-west-2b", "us-west-2c"]
-  listener {
-    instance_port     = 30171
-    instance_protocol = "http"
-    lb_port           = 80
-    lb_protocol       = "http"
-  }
-  health_check {
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-    timeout             = 3
-    target              = "TCP:30171"
-    interval            = 5
-  }
+data "aws_subnet_ids" "subnets" {
+  vpc_id = data.aws_vpc.default.id
+}
 
-  instances = aws_instance.workers.*.id
+resource "aws_lb" "lb" {
+  internal           = false
+  ip_address_type    = "ipv4"
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.k8s-sg.id]
+  name               = "lb"
+  subnets            = data.aws_subnet_ids.subnets.ids
+}
+
+resource "aws_alb_listener" "listener" {
+  load_balancer_arn = aws_lb.lb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    target_group_arn = aws_lb_target_group.tg.arn
+    type             = "forward"
+  }
+}
+
+resource "aws_lb_target_group" "tg" {
+  load_balancing_algorithm_type = "round_robin"
+  name                          = "tg"
+  port                          = 30171
+  protocol                      = "HTTP"
+  vpc_id                        = data.aws_vpc.default.id
+}
+
+resource "aws_lb_target_group_attachment" "attachment" {
+  count            = length(aws_instance.workers)
+  target_group_arn = aws_lb_target_group.tg.arn
+  target_id        = aws_instance.workers[count.index].id
+  port             = 30171
 }
 
 resource "aws_route53_record" "www" {
@@ -128,5 +147,5 @@ resource "aws_route53_record" "www" {
   name    = var.ingress_dns
   type    = "CNAME"
   ttl     = "300"
-  records = [aws_elb.lb.dns_name]
+  records = [aws_lb.lb.dns_name]
 }

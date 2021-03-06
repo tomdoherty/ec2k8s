@@ -5,5 +5,5 @@ output "controller_ip" {
 
 output "loadbalancer_ip" {
   description = "The loadbalancer ip is"
-  value       = aws_elb.lb.dns_name
+  value       = aws_lb.lb.dns_name
 }
