@@ -52,7 +52,7 @@ resource "aws_security_group_rule" "egress" {
 
 resource "aws_key_pair" "ssh-key" {
   key_name   = "ssh-key_${var.name}"
-  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9FNpoDiJLd+if9noTjimmiCfTi0BUa3uQFnUOf5PVLx+gT0+61j7+EOvvqdVN8pUI/+eNMJPqDvrPsKqe63QJkDboltJaY9m39KAPAVw/L8myLDsxcXprmLOtK8MlHc1FvGwsUeiZAZaEdt/KfOd/zkU/qd5xpQVk9ERO/H+o3T5ReuEV63vlSnF8mXvh5gFzJVLiTgMgGhYizg24Z894nalGx+rvPz1XWVhEqlZsQsdyXQsnUdoboSyVw1tcN3y87Tws8k72ZRMd5Yc9zs+5XN3Yj4DOtJzac0wvcFAVIetHMz2BWUbT5Ei9BDAjGerI+nr47p5CDetyqy82Ctwz tom@Thomass-MacBook-Pro.local"
+  public_key = var.ssh_public_key
 
   tags = merge(var.tags, {
     Name = "ssh-key_${var.name}"
@@ -61,8 +61,8 @@ resource "aws_key_pair" "ssh-key" {
 
 
 resource "aws_instance" "controller" {
-  ami                         = "ami-08d70e59c07c61a3a"
-  instance_type               = "t2.micro"
+  ami                         = var.worker_ami
+  instance_type               = var.controller_size
   associate_public_ip_address = true
   key_name                    = "ssh-key_${var.name}"
   user_data                   = <<-EOF
@@ -71,9 +71,7 @@ resource "aws_instance" "controller" {
     printf '[kubernetes]\nmode=controller\n' >/etc/ansible/facts.d/aws.fact
   EOF
 
-  vpc_security_group_ids = [
-    aws_security_group.sg.id
-  ]
+  vpc_security_group_ids = [aws_security_group.sg.id]
 
   tags = merge(var.tags, {
     Name = "${var.name}-controller"
@@ -82,8 +80,8 @@ resource "aws_instance" "controller" {
 
 
 resource "aws_instance" "workers" {
-  ami                         = "ami-08d70e59c07c61a3a"
-  instance_type               = "t2.micro"
+  ami                         = var.worker_ami
+  instance_type               = var.worker_size
   count                       = var.worker_count
   associate_public_ip_address = true
   key_name                    = "ssh-key_${var.name}"
@@ -93,9 +91,7 @@ resource "aws_instance" "workers" {
     printf '[kubernetes]\nmode=worker\ncontroller_ip=${aws_instance.controller.public_ip}\n' >/etc/ansible/facts.d/aws.fact
   EOF
 
-  vpc_security_group_ids = [
-    aws_security_group.sg.id
-  ]
+  vpc_security_group_ids = [aws_security_group.sg.id]
 
   tags = merge(var.tags, {
     Name = "${var.name}-worker-${count.index}"
@@ -137,7 +133,7 @@ resource "aws_alb_listener" "listener" {
 resource "aws_lb_target_group" "tg" {
   load_balancing_algorithm_type = "round_robin"
   name                          = "${var.name}-tg"
-  port                          = 30171
+  port                          = var.target_port
   protocol                      = "HTTP"
   vpc_id                        = data.aws_vpc.default.id
 
@@ -151,7 +147,7 @@ resource "aws_lb_target_group_attachment" "attachment" {
   count            = length(aws_instance.workers)
   target_group_arn = aws_lb_target_group.tg.arn
   target_id        = aws_instance.workers[count.index].id
-  port             = 30171
+  port             = var.target_port
 }
 
 

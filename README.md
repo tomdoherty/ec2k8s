@@ -9,6 +9,7 @@ $ . venv/bin/activate
 $ pip install -r requirements.txt
 $ curl -sL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv4.0.4/kustomize_v4.0.4_darwin_amd64.tar.gz | tar xf - 
 
+$ ( cd terraform/aws/environments/dev/us-west-2/app; terraform init ) # initialise terraform
 $ ( cd terraform/aws/environments/dev/us-west-2/app; terraform apply ) # bring up ec2 instances & elb
 $ ( cd ansible; ./playbook.yml ) # deploy kubernetes
 $ ./kustomize build kubernetes | kubectl --kubeconfig=ansible/kubeconfig.yaml apply -f -

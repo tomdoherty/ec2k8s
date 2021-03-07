@@ -1,3 +1,13 @@
+variable "controller_ami" {
+  type = string
+}
+
+
+variable "controller_size" {
+  type = string
+}
+
+
 variable "ingress_dns" {
   type = string
 }
@@ -8,8 +18,19 @@ variable "name" {
 }
 
 
+variable "ssh_public_key" {
+  type = string
+}
+
+
 variable "tags" {
   type = map
+}
+
+
+variable "target_port" {
+  type    = number
+  default = 30171
 }
 
 
@@ -19,8 +40,18 @@ variable "tcp_ingress_ports" {
 }
 
 
+variable "worker_ami" {
+  type = string
+}
+
+
 variable "worker_count" {
   type = number
+}
+
+
+variable "worker_size" {
+  type = string
 }
 
 
