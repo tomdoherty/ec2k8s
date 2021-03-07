@@ -1,16 +1,47 @@
-data "aws_vpc" "default" {
-  default = true
+resource "aws_vpc" "tom_vpc" {
+  cidr_block = "10.20.0.0/16"
+
+  tags = merge(var.tags, {
+    Name = "vpc_${var.name}"
+  })
 }
 
 
-data "aws_subnet_ids" "default" {
-  vpc_id = data.aws_vpc.default.id
+resource "aws_internet_gateway" "tom_igw" {
+  vpc_id = aws_vpc.tom_vpc.id
+
+  tags = merge(var.tags, {
+    Name = "igw_${var.name}"
+  })
+}
+
+resource "aws_subnet" "tom_subnet" {
+  vpc_id            = aws_vpc.tom_vpc.id
+  cidr_block        = "10.20.1.0/24"
+  availability_zone = "us-west-2a"
+
+  tags = merge(var.tags, {
+    Name = "subnet_${var.name}"
+  })
+}
+
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.tom_vpc.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.tom_igw.id
+  }
+}
+
+resource "aws_route_table_association" "tom_rta" {
+  subnet_id      = aws_subnet.tom_subnet.id
+  route_table_id = aws_route_table.public_rt.id
 }
 
 
 resource "aws_security_group" "sg" {
   name   = "sg_${var.name}"
-  vpc_id = data.aws_vpc.default.id
+  vpc_id = aws_vpc.tom_vpc.id
 
   tags = merge(var.tags, {
     Name = "sg_${var.name}"
@@ -100,7 +131,7 @@ resource "aws_instance" "workers" {
 
 
 data "aws_subnet_ids" "subnets" {
-  vpc_id = data.aws_vpc.default.id
+  vpc_id = aws_vpc.tom_vpc.id
 }
 
 
@@ -135,7 +166,7 @@ resource "aws_lb_target_group" "tg" {
   name                          = "${var.name}-tg"
   port                          = var.target_port
   protocol                      = "HTTP"
-  vpc_id                        = data.aws_vpc.default.id
+  vpc_id                        = aws_vpc.tom_vpc.id
 
   tags = merge(var.tags, {
     Name = "${var.name}-tg"
