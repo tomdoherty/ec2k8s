@@ -3,12 +3,13 @@
   hosts: all
 
   pre_tasks:
-    - name: Set mode
+    - name: set mode
       set_fact:
         kubernetes_mode: "{{ ansible_hostname }}"
         controller_ip: controller
+        kubernetes_token: abcdef.1234567890abcdef
 
-    - name: Tweak kubelet args
+    - name: tweak kubelet args
       copy:
         dest: /etc/default/kubelet
         mode: 0600
@@ -16,6 +17,6 @@
           KUBELET_EXTRA_ARGS="--fail-swap-on=false --cgroup-driver=cgroupfs"
 
   tasks:
-    - name: "Include kubernetes"
+    - name: "include kubernetes"
       include_role:
         name: "kubernetes"

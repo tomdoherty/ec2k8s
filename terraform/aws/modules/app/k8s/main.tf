@@ -18,40 +18,12 @@ resource "aws_security_group" "sg" {
 }
 
 
-resource "aws_security_group_rule" "ingress_80" {
+resource "aws_security_group_rule" "ingress_tcp" {
+  for_each          = var.tcp_ingress_ports
+  description       = "TCP ingress for port ${each.key}"
   type              = "ingress"
-  from_port         = 80
-  to_port           = 80
-  protocol          = "TCP"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.sg.id
-}
-
-
-resource "aws_security_group_rule" "ingress_6443" {
-  type              = "ingress"
-  from_port         = 6443
-  to_port           = 6443
-  protocol          = "TCP"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.sg.id
-}
-
-
-resource "aws_security_group_rule" "ingress_30171" {
-  type              = "ingress"
-  from_port         = 30171
-  to_port           = 30171
-  protocol          = "TCP"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.sg.id
-}
-
-
-resource "aws_security_group_rule" "ingress_ssh" {
-  type              = "ingress"
-  from_port         = 22
-  to_port           = 22
+  from_port         = each.key
+  to_port           = each.key
   protocol          = "TCP"
   cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.sg.id

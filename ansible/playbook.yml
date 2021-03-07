@@ -2,7 +2,7 @@
 
 - hosts: all
   tasks:
-  - name: Include Role
+  - name: include Role
     include_role:
       name: kubernetes
       apply:
