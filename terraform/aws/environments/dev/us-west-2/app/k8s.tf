@@ -20,6 +20,10 @@ module "k8s-dev" {
 
   zone_id = module.zone-dev-k8s.zone_id
 
+  vpc_cidr                = "10.0.0.0/16"
+  vpc_subnet_public_cidrs = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  vpc_availability_zones  = ["us-west-2a", "us-west-2b", "us-west-2c"]
+
   tags = {
     app = "k8s"
   }

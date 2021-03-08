@@ -1,16 +1,56 @@
-data "aws_vpc" "default" {
-  default = true
+resource "aws_vpc" "vpc" {
+  cidr_block           = var.vpc_cidr
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+
+  tags = merge(var.tags, {
+    Name = "vpc_${var.name}"
+  })
 }
 
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.vpc.id
 
-data "aws_subnet_ids" "default" {
-  vpc_id = data.aws_vpc.default.id
+  tags = merge(var.tags, {
+    Name = "igw_${var.name}"
+  })
+}
+
+resource "aws_subnet" "subnet_public" {
+  count             = length(var.vpc_subnet_public_cidrs)
+  vpc_id            = aws_vpc.vpc.id
+  availability_zone = element(var.vpc_availability_zones, count.index)
+  cidr_block        = element(var.vpc_subnet_public_cidrs, count.index)
+
+  map_public_ip_on_launch = "true"
+
+  tags = merge(var.tags, {
+    Name = "subnet_${var.name}"
+  })
+}
+
+resource "aws_route_table" "rtb_public" {
+  vpc_id = aws_vpc.vpc.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+
+  tags = merge(var.tags, {
+    Name = "rtb_${var.name}"
+  })
+}
+
+resource "aws_route_table_association" "rta_subnet_public" {
+  count          = length(var.vpc_subnet_public_cidrs)
+  subnet_id      = element(aws_subnet.subnet_public.*.id, count.index)
+  route_table_id = aws_route_table.rtb_public.id
 }
 
 
 resource "aws_security_group" "sg" {
   name   = "sg_${var.name}"
-  vpc_id = data.aws_vpc.default.id
+  vpc_id = aws_vpc.vpc.id
 
   tags = merge(var.tags, {
     Name = "sg_${var.name}"
@@ -18,6 +58,7 @@ resource "aws_security_group" "sg" {
 }
 
 
+// XXX switch to looping through dict so can attach proper description
 resource "aws_security_group_rule" "ingress_tcp" {
   for_each          = var.tcp_ingress_ports
   description       = "TCP ingress for port ${each.key}"
@@ -72,6 +113,7 @@ resource "aws_instance" "controller" {
   EOF
 
   vpc_security_group_ids = [aws_security_group.sg.id]
+  subnet_id              = aws_subnet.subnet_public.0.id
 
   tags = merge(var.tags, {
     Name = "${var.name}-controller"
@@ -92,15 +134,11 @@ resource "aws_instance" "workers" {
   EOF
 
   vpc_security_group_ids = [aws_security_group.sg.id]
+  subnet_id              = aws_subnet.subnet_public[count.index].id
 
   tags = merge(var.tags, {
     Name = "${var.name}-worker-${count.index}"
   })
-}
-
-
-data "aws_subnet_ids" "subnets" {
-  vpc_id = data.aws_vpc.default.id
 }
 
 
@@ -110,7 +148,7 @@ resource "aws_lb" "lb" {
   ip_address_type    = "ipv4"
   load_balancer_type = "application"
   security_groups    = [aws_security_group.sg.id]
-  subnets            = data.aws_subnet_ids.subnets.ids
+  subnets            = aws_subnet.subnet_public.*.id
 
   tags = merge(var.tags, {
     Name = "${var.name}-alb"
@@ -135,7 +173,7 @@ resource "aws_lb_target_group" "tg" {
   name                          = "${var.name}-tg"
   port                          = var.target_port
   protocol                      = "HTTP"
-  vpc_id                        = data.aws_vpc.default.id
+  vpc_id                        = aws_vpc.vpc.id
 
   tags = merge(var.tags, {
     Name = "${var.name}-tg"
