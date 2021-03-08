@@ -1,16 +1,3 @@
-variable "vpc_cidr" {
-  type = string
-}
-
-variable "vpc_availability_zones" {
-  type = list
-}
-
-variable "vpc_subnet_public_cidrs" {
-  type = list
-}
-
-
 variable "controller_ami" {
   type = string
 }
@@ -36,6 +23,11 @@ variable "ssh_public_key" {
 }
 
 
+variable "sn_public_ids" {
+  type = list
+}
+
+
 variable "tags" {
   type = map
 }
@@ -50,6 +42,11 @@ variable "target_port" {
 variable "tcp_ingress_ports" {
   default = ["22", "80", "6443", "30171"]
   type    = set(string)
+}
+
+
+variable "vpc_id" {
+  type = string
 }
 
 

@@ -1,56 +1,6 @@
-resource "aws_vpc" "vpc" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_support   = true
-  enable_dns_hostnames = true
-
-  tags = merge(var.tags, {
-    Name = "vpc_${var.name}"
-  })
-}
-
-resource "aws_internet_gateway" "igw" {
-  vpc_id = aws_vpc.vpc.id
-
-  tags = merge(var.tags, {
-    Name = "igw_${var.name}"
-  })
-}
-
-resource "aws_subnet" "subnet_public" {
-  count             = length(var.vpc_subnet_public_cidrs)
-  vpc_id            = aws_vpc.vpc.id
-  availability_zone = element(var.vpc_availability_zones, count.index)
-  cidr_block        = element(var.vpc_subnet_public_cidrs, count.index)
-
-  map_public_ip_on_launch = "true"
-
-  tags = merge(var.tags, {
-    Name = "subnet_${var.name}"
-  })
-}
-
-resource "aws_route_table" "rtb_public" {
-  vpc_id = aws_vpc.vpc.id
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.igw.id
-  }
-
-  tags = merge(var.tags, {
-    Name = "rtb_${var.name}"
-  })
-}
-
-resource "aws_route_table_association" "rta_subnet_public" {
-  count          = length(var.vpc_subnet_public_cidrs)
-  subnet_id      = element(aws_subnet.subnet_public.*.id, count.index)
-  route_table_id = aws_route_table.rtb_public.id
-}
-
-
 resource "aws_security_group" "sg" {
   name   = "sg_${var.name}"
-  vpc_id = aws_vpc.vpc.id
+  vpc_id = var.vpc_id
 
   tags = merge(var.tags, {
     Name = "sg_${var.name}"
@@ -91,6 +41,7 @@ resource "aws_security_group_rule" "egress" {
 }
 
 
+
 resource "aws_key_pair" "ssh-key" {
   key_name   = "ssh-key_${var.name}"
   public_key = var.ssh_public_key
@@ -113,7 +64,7 @@ resource "aws_instance" "controller" {
   EOF
 
   vpc_security_group_ids = [aws_security_group.sg.id]
-  subnet_id              = aws_subnet.subnet_public.0.id
+  subnet_id              = var.sn_public_ids.0
 
   tags = merge(var.tags, {
     Name = "${var.name}-controller"
@@ -122,9 +73,9 @@ resource "aws_instance" "controller" {
 
 
 resource "aws_instance" "workers" {
+  count                       = var.worker_count
   ami                         = var.worker_ami
   instance_type               = var.worker_size
-  count                       = var.worker_count
   associate_public_ip_address = true
   key_name                    = "ssh-key_${var.name}"
   user_data                   = <<-EOF
@@ -134,7 +85,7 @@ resource "aws_instance" "workers" {
   EOF
 
   vpc_security_group_ids = [aws_security_group.sg.id]
-  subnet_id              = aws_subnet.subnet_public[count.index].id
+  subnet_id              = var.sn_public_ids[count.index]
 
   tags = merge(var.tags, {
     Name = "${var.name}-worker-${count.index}"
@@ -148,7 +99,7 @@ resource "aws_lb" "lb" {
   ip_address_type    = "ipv4"
   load_balancer_type = "application"
   security_groups    = [aws_security_group.sg.id]
-  subnets            = aws_subnet.subnet_public.*.id
+  subnets            = var.sn_public_ids
 
   tags = merge(var.tags, {
     Name = "${var.name}-alb"
@@ -173,7 +124,7 @@ resource "aws_lb_target_group" "tg" {
   name                          = "${var.name}-tg"
   port                          = var.target_port
   protocol                      = "HTTP"
-  vpc_id                        = aws_vpc.vpc.id
+  vpc_id                        = var.vpc_id
 
   tags = merge(var.tags, {
     Name = "${var.name}-tg"
