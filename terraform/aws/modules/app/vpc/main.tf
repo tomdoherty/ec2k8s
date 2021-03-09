@@ -21,8 +21,8 @@ resource "aws_internet_gateway" "igw" {
 resource "aws_subnet" "subnet_public" {
   count                   = length(var.vpc_subnet_public_cidrs)
   vpc_id                  = aws_vpc.vpc.id
-  availability_zone       = element(var.vpc_availability_zones, count.index)
-  cidr_block              = element(var.vpc_subnet_public_cidrs, count.index)
+  availability_zone       = var.vpc_availability_zones[count.index]
+  cidr_block              = var.vpc_subnet_public_cidrs[count.index]
   map_public_ip_on_launch = "true"
 
   tags = merge(var.tags, {
@@ -46,6 +46,6 @@ resource "aws_route_table" "rtb_public" {
 
 resource "aws_route_table_association" "rta_subnet_public" {
   count          = length(var.vpc_subnet_public_cidrs)
-  subnet_id      = element(aws_subnet.subnet_public.*.id, count.index)
+  subnet_id      = aws_subnet.subnet_public[count.index].id
   route_table_id = aws_route_table.rtb_public.id
 }
