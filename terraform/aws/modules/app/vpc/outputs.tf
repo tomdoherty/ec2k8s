@@ -4,5 +4,5 @@ output "vpc_id" {
 
 
 output "sn_public_ids" {
-  value = aws_subnet.subnet_public[*].id
+  value = values(aws_subnet.subnet_public)[*].id
 }
