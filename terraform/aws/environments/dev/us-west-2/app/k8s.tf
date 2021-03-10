@@ -1,7 +1,7 @@
 data "aws_ami" "ami-k8s" {
-  most_recent      = true
-  name_regex       = "^k8s-packer-.*"
-  owners           = ["self"]
+  most_recent = true
+  name_regex  = "^k8s-packer-.*"
+  owners      = ["self"]
 
   tags = {
     app = "k8s"
