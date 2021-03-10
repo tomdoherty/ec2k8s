@@ -93,7 +93,9 @@
       become: no
       tags: [ molecule-notest ]
     
-  when: kubernetes_mode == 'controller'
+  when:
+    - kubernetes_mode is defined
+    - kubernetes_mode == 'controller'
 
 
 - name: configure worker
@@ -110,4 +112,6 @@
         creates=/etc/kubernetes/kubelet.conf
       tags: [ molecule-nolint ]
 
-  when: kubernetes_mode == 'worker'
+  when:
+    - kubernetes_mode is defined
+    - kubernetes_mode == 'worker'
