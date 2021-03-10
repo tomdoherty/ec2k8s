@@ -24,12 +24,12 @@ variable "ssh_public_key" {
 
 
 variable "sn_public_ids" {
-  type = list
+  type = list(any)
 }
 
 
 variable "tags" {
-  type = map
+  type = map(any)
 }
 
 

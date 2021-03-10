@@ -9,15 +9,15 @@ variable "vpc_cidr" {
 
 
 variable "vpc_availability_zones" {
-  type = list
+  type = list(any)
 }
 
 
 variable "vpc_subnet_public_cidrs" {
-  type = list
+  type = list(any)
 }
 
 
 variable "tags" {
-  type = map
+  type = map(any)
 }
