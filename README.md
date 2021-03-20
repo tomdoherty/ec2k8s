@@ -26,5 +26,5 @@ $ curl http://k8s.tom.works # test application
 # cleanup
 
 ```shell
-$ ( cd terraform/aws/environments/dev/us-west-2/app; terraform destroy ) # bring up ec2 instances & elb
+$ ( cd terraform/aws/environments/dev/us-west-2/app; terraform destroy ) # destroy resources
 ```
