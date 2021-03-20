@@ -9,12 +9,24 @@
         controller_ip: controller
         kubernetes_token: abcdef.1234567890abcdef
 
-    - name: tweak kubelet args
+
+    - name: tweak kubelet args - debian
       copy:
         dest: /etc/default/kubelet
         mode: 0600
         content: |
           KUBELET_EXTRA_ARGS="--fail-swap-on=false --cgroup-driver=cgroupfs"
+      when: ansible_os_family == 'Debian'
+
+
+    - name: tweak kubelet args - redhat
+      copy:
+        dest: /etc/sysconfig/kubelet
+        mode: 0600
+        content: |
+          KUBELET_EXTRA_ARGS="--fail-swap-on=false --cgroup-driver=cgroupfs"
+      when: ansible_os_family == 'RedHat'
+
 
   tasks:
     - name: "include kubernetes"
