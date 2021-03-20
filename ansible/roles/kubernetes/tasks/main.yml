@@ -8,31 +8,12 @@
   when: ansible_local.aws.kubernetes.mode is defined
 
 
-- name: install dependencies
-  apt:
-    name: [ apt-transport-https, ca-certificates ]
-    update_cache: yes
+- include_tasks: setup-RedHat.yml
+  when: ansible_os_family == 'RedHat'
 
 
-- name: apt signing keys
-  apt_key:
-    url: "{{ item }}"
-  with_items:
-    - https://download.docker.com/linux/ubuntu/gpg
-    - https://packages.cloud.google.com/apt/doc/apt-key.gpg
-
-
-- name: apt repositories
-  apt_repository:
-    repo: "{{ item }}"
-  with_items:
-    - deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
-    - deb https://apt.kubernetes.io/ kubernetes-xenial main
-
-
-- name: install docker & kubernetes
-  apt: 
-    name: [ containerd.io, docker-ce, docker-ce-cli, kubelet, kubeadm, kubectl ]
+- include_tasks: setup-Debian.yml
+  when: ansible_os_family == 'Debian'
 
 
 - name: remove swapfile from /etc/fstab
@@ -63,8 +44,8 @@
       stat:
         path: /etc/kubernetes/admin.conf
       register: kubernetes_init_stat
-    
-    
+
+
     - name: kubeadm init
       command: >
         kubeadm init

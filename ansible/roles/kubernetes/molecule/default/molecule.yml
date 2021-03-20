@@ -5,7 +5,7 @@ driver:
   name: docker
 platforms:
   - name: controller
-    image: ubuntu:xenial
+    image: centos:7
     pre_build_image: false
     command: /sbin/init
     tmpfs:
