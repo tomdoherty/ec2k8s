@@ -73,7 +73,7 @@ resource "aws_instance" "controller" {
 
 
 resource "aws_instance" "workers" {
-  count                       = var.worker_count
+  for_each                    = { for x in range(var.worker_count) : x => "worker-${x}" }
   ami                         = var.worker_ami
   instance_type               = var.worker_size
   associate_public_ip_address = true
@@ -85,10 +85,10 @@ resource "aws_instance" "workers" {
   EOF
 
   vpc_security_group_ids = [aws_security_group.sg.id]
-  subnet_id              = var.sn_public_ids[count.index]
+  subnet_id              = element(var.sn_public_ids, each.key)
 
   tags = merge(var.tags, {
-    Name = "${var.name}-worker-${count.index}"
+    Name = "${var.name}-${each.value}"
   })
 }
 
@@ -133,9 +133,9 @@ resource "aws_lb_target_group" "tg" {
 
 
 resource "aws_lb_target_group_attachment" "attachment" {
-  count            = length(aws_instance.workers)
+  for_each         = { for x in range(var.worker_count) : x => "worker-${x}" }
   target_group_arn = aws_lb_target_group.tg.arn
-  target_id        = aws_instance.workers[count.index].id
+  target_id        = aws_instance.workers[each.key].id
   port             = var.target_port
 }
 
